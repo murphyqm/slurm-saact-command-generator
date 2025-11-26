@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SLURM sacct Command Generator</title>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>SLURM sacct Command Generator</h1>
+            <p>Generate sacct commands for SLURM job accounting</p>
+        </header>
+
+        <main>
+            <form id="sacctForm">
+                <div class="form-group">
+                    <label for="outputFile">Output File Name:</label>
+                    <input 
+                        type="text" 
+                        id="outputFile" 
+                        name="outputFile" 
+                        required 
+                        placeholder="e.g., jul-sept-incl-mini.txt"
+                        aria-describedby="outputFileHelp"
+                        pattern="[a-zA-Z0-9._-]+"
+                        title="Filename can only contain letters, numbers, dots, underscores, and hyphens"
+                        maxlength="255"
+                    >
+                    <small id="outputFileHelp">Enter the filename where the output will be saved (letters, numbers, dots, underscores, and hyphens only)</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="startDate">Start Date:</label>
+                    <input 
+                        type="date" 
+                        id="startDate" 
+                        name="startDate" 
+                        required
+                        aria-describedby="startDateHelp"
+                    >
+                    <small id="startDateHelp">Select the start date for the job query</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="endDate">End Date:</label>
+                    <input 
+                        type="date" 
+                        id="endDate" 
+                        name="endDate" 
+                        required
+                        aria-describedby="endDateHelp"
+                    >
+                    <small id="endDateHelp">Select the end date for the job query</small>
+                </div>
+
+                <button type="submit" class="generate-btn">Generate Command</button>
+            </form>
+
+            <div id="output" class="output-section" style="display: none;">
+                <h2>Generated Command:</h2>
+                <div class="command-container">
+                    <pre id="generatedCommand" aria-live="polite"></pre>
+                    <button type="button" id="copyBtn" class="copy-btn" aria-label="Copy command to clipboard">
+                        Copy to Clipboard
+                    </button>
+                </div>
+                <div id="copyStatus" aria-live="polite" class="copy-status"></div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Input sanitization function
+        function sanitizeFilename(filename) {
+            // Remove any potentially dangerous characters
+            return filename.replace(/[^a-zA-Z0-9._-]/g, '').substring(0, 255);
+        }
+        
+        // Validate date range
+        function validateDateRange(startDate, endDate) {
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+            const today = new Date();
+            
+            // Check if start date is before end date
+            if (start > end) {
+                return 'Start date must be before end date.';
+            }
+            
+            // Check if dates are not too far in the future (reasonable limit)
+            const maxFutureDate = new Date(today.getFullYear() + 2, today.getMonth(), today.getDate());
+            if (start > maxFutureDate || end > maxFutureDate) {
+                return 'Dates cannot be more than 2 years in the future.';
+            }
+            
+            return null; // Valid
+        }
+
+        document.getElementById('sacctForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const outputFile = document.getElementById('outputFile').value;
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            
+            if (!outputFile || !startDate || !endDate) {
+                alert('Please fill in all required fields.');
+                return;
+            }
+            
+            // Validate date range
+            const dateError = validateDateRange(startDate, endDate);
+            if (dateError) {
+                alert(dateError);
+                return;
+            }
+            
+            // Sanitize the filename
+            const sanitizedFilename = sanitizeFilename(outputFile);
+            if (sanitizedFilename !== outputFile) {
+                alert('Filename has been sanitized. Only letters, numbers, dots, underscores, and hyphens are allowed.');
+            }
+            
+            if (!sanitizedFilename) {
+                alert('Please enter a valid filename.');
+                return;
+            }
+            
+            // Format the end date to include time (23:59:59)
+            const formattedEndDate = endDate + 'T23:59:59';
+            
+            // Generate the sacct command with sanitized filename
+            const command = `sacct -a -S ${startDate} -E ${formattedEndDate} --parsable2 --state=CA,CD,F,NF,BF,TO,DL --format=MaxRSS,Req,TotalCPU,JobID,Partition,User,CPUTimeRAW,AllocTRES,State,Submit,Eligible,Start,End,Elapsed,ReqCPUS,ReqMem,ReqNodes,AllocCPUS,AllocNodes >${sanitizedFilename}`;
+            
+            // Display the command
+            document.getElementById('generatedCommand').textContent = command;
+            document.getElementById('output').style.display = 'block';
+            
+            // Update the input field with sanitized value
+            document.getElementById('outputFile').value = sanitizedFilename;
+            
+            // Scroll to output section
+            document.getElementById('output').scrollIntoView({ behavior: 'smooth' });
+        });
+        
+        document.getElementById('copyBtn').addEventListener('click', function() {
+            const command = document.getElementById('generatedCommand').textContent;
+            
+            navigator.clipboard.writeText(command).then(function() {
+                const status = document.getElementById('copyStatus');
+                status.textContent = 'Command copied to clipboard!';
+                status.className = 'copy-status success';
+                
+                // Clear the message after 3 seconds
+                setTimeout(() => {
+                    status.textContent = '';
+                    status.className = 'copy-status';
+                }, 3000);
+            }).catch(function(err) {
+                const status = document.getElementById('copyStatus');
+                status.textContent = 'Failed to copy command. Please select and copy manually.';
+                status.className = 'copy-status error';
+                
+                // Clear the message after 5 seconds
+                setTimeout(() => {
+                    status.textContent = '';
+                    status.className = 'copy-status';
+                }, 5000);
+            });
+        });
+        
+        // Set default dates (current month)
+        window.addEventListener('DOMContentLoaded', function() {
+            const today = new Date();
+            const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+            const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+            
+            document.getElementById('startDate').value = firstDay.toISOString().split('T')[0];
+            document.getElementById('endDate').value = lastDay.toISOString().split('T')[0];
+        });
+    </script>
+</body>
+</html>
