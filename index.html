@@ -60,14 +60,27 @@
             </form>
 
             <div id="output" class="output-section" style="display: none;">
-                <h2>Generated Command:</h2>
+                <h2>Generated SLURM Command:</h2>
                 <div class="command-container">
                     <pre id="generatedCommand" aria-live="polite"></pre>
-                    <button type="button" id="copyBtn" class="copy-btn" aria-label="Copy command to clipboard">
+                    <button type="button" id="copyBtn" class="copy-btn" aria-label="Copy SLURM command to clipboard">
                         Copy to Clipboard
                     </button>
                 </div>
                 <div id="copyStatus" aria-live="polite" class="copy-status"></div>
+                
+                <h2>Generated Rclone Command:</h2>
+                <div class="command-container">
+                    <pre id="rcloneCommand" aria-live="polite"></pre>
+                    <button type="button" id="copyRcloneBtn" class="copy-btn" aria-label="Copy rclone command to clipboard">
+                        Copy to Clipboard
+                    </button>
+                    <p class="rclone-note">
+                        <strong>Note:</strong> Replace "onedrive" with the name of your rclone remote. 
+                        Use <code>rclone listremotes</code> to see available remotes.
+                    </p>
+                </div>
+                <div id="copyRcloneStatus" aria-live="polite" class="copy-status"></div>
             </div>
         </main>
     </div>
@@ -135,8 +148,12 @@
             // Generate the sacct command with sanitized filename
             const command = `sacct -a -S ${startDate} -E ${formattedEndDate} --parsable2 --state=CA,CD,F,NF,BF,TO,DL --format=MaxRSS,Req,TotalCPU,JobID,Partition,User,Priority,CPUTimeRAW,AllocTRES,State,Submit,Eligible,Start,End,Elapsed,ReqCPUS,ReqMem,ReqNodes,AllocCPUS,AllocNodes >${sanitizedFilename}`;
             
-            // Display the command
+            // Generate the rclone command
+            const rcloneCommand = `module load rclone && rclone copy ${sanitizedFilename} onedrive:/`;
+            
+            // Display the commands
             document.getElementById('generatedCommand').textContent = command;
+            document.getElementById('rcloneCommand').textContent = rcloneCommand;
             document.getElementById('output').style.display = 'block';
             
             // Update the input field with sanitized value
@@ -151,7 +168,7 @@
             
             navigator.clipboard.writeText(command).then(function() {
                 const status = document.getElementById('copyStatus');
-                status.textContent = 'Command copied to clipboard!';
+                status.textContent = 'SLURM command copied to clipboard!';
                 status.className = 'copy-status success';
                 
                 // Clear the message after 3 seconds
@@ -161,7 +178,33 @@
                 }, 3000);
             }).catch(function(err) {
                 const status = document.getElementById('copyStatus');
-                status.textContent = 'Failed to copy command. Please select and copy manually.';
+                status.textContent = 'Failed to copy SLURM command. Please select and copy manually.';
+                status.className = 'copy-status error';
+                
+                // Clear the message after 5 seconds
+                setTimeout(() => {
+                    status.textContent = '';
+                    status.className = 'copy-status';
+                }, 5000);
+            });
+        });
+        
+        document.getElementById('copyRcloneBtn').addEventListener('click', function() {
+            const command = document.getElementById('rcloneCommand').textContent;
+            
+            navigator.clipboard.writeText(command).then(function() {
+                const status = document.getElementById('copyRcloneStatus');
+                status.textContent = 'Rclone command copied to clipboard!';
+                status.className = 'copy-status success';
+                
+                // Clear the message after 3 seconds
+                setTimeout(() => {
+                    status.textContent = '';
+                    status.className = 'copy-status';
+                }, 3000);
+            }).catch(function(err) {
+                const status = document.getElementById('copyRcloneStatus');
+                status.textContent = 'Failed to copy rclone command. Please select and copy manually.';
                 status.className = 'copy-status error';
                 
                 // Clear the message after 5 seconds
