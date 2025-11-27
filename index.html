@@ -23,7 +23,7 @@
                         id="outputFile" 
                         name="outputFile" 
                         required 
-                        placeholder="e.g., jul-sept-incl-mini.txt"
+                        placeholder="e.g., slurm_output_DATE.txt"
                         aria-describedby="outputFileHelp"
                         pattern="[a-zA-Z0-9._-]+"
                         title="Filename can only contain letters, numbers, dots, underscores, and hyphens"
@@ -133,7 +133,7 @@
             const formattedEndDate = endDate + 'T23:59:59';
             
             // Generate the sacct command with sanitized filename
-            const command = `sacct -a -S ${startDate} -E ${formattedEndDate} --parsable2 --state=CA,CD,F,NF,BF,TO,DL --format=MaxRSS,Req,TotalCPU,JobID,Partition,User,CPUTimeRAW,AllocTRES,State,Submit,Eligible,Start,End,Elapsed,ReqCPUS,ReqMem,ReqNodes,AllocCPUS,AllocNodes >${sanitizedFilename}`;
+            const command = `sacct -a -S ${startDate} -E ${formattedEndDate} --parsable2 --state=CA,CD,F,NF,BF,TO,DL --format=MaxRSS,Req,TotalCPU,JobID,Partition,User,Priority,CPUTimeRAW,AllocTRES,State,Submit,Eligible,Start,End,Elapsed,ReqCPUS,ReqMem,ReqNodes,AllocCPUS,AllocNodes >${sanitizedFilename}`;
             
             // Display the command
             document.getElementById('generatedCommand').textContent = command;
